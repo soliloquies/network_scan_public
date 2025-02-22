@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Parameters</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { background-color: #f2f2f2; padding: 10px; border-radius: 5px; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/import.html">Import</a>
+        <a href="/status.html">Status</a>
+        <a href="/config.html">Config</a>
+        <a href="/history.html">History</a>
+    </nav>
+    <h1>Current Configuration Parameters</h1>
+    <p>Below are the current settings used for scanning. Upload a new config via the Import page to change them.</p>
+    <pre id="configData"></pre>
+
+    <script>
+        const apiBaseUrl = '/api';
+
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/config`);
+                const data = await response.json();
+                document.getElementById('configData').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error fetching config:', error);
+            }
+        }
+        loadConfig();
+    </script>
+</body>
+</html>

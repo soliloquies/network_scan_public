@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan History</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/import.html">Import</a>
+        <a href="/status.html">Status</a>
+        <a href="/config.html">Config</a>
+        <a href="/history.html">History</a>
+    </nav>
+    <h1>Scan History</h1>
+    <p>Below are all past scan results stored in the database.</p>
+    <table id="history">
+        <thead>
+            <tr>
+                <th>IP</th>
+                <th>System Name</th>
+                <th>Vendor</th>
+                <th>Model</th>
+                <th>SNMP Status</th>
+                <th>SSH Status</th>
+                <th>SSH User</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const apiBaseUrl = '/api';
+
+        async function loadHistory() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/history`);
+                const data = await response.json();
+                const tbody = document.querySelector('#history tbody');
+                tbody.innerHTML = '';
+                data.results.forEach(result => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${result.ip}</td>
+                        <td>${result.sysName || 'N/A'}</td>
+                        <td>${result.vendor || 'N/A'}</td>
+                        <td>${result.model || 'N/A'}</td>
+                        <td>${result.snmp_status}</td>
+                        <td>${result.ssh_status}</td>
+                        <td>${result.ssh_user || 'N/A'}</td>
+                        <td>${result.timestamp}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching history:', error);
+            }
+        }
+        loadHistory();
+    </script>
+</body>
+</html>
