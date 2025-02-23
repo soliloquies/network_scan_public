@@ -15,6 +15,8 @@ import os
 import pandas as pd
 import redis
 import io
+from pydantic import BaseModel
+from typing import List, Dict, Optional
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -129,13 +131,15 @@ async def get_config():
 async def get_history():
     return {"results": get_results(), "columns": ["ip", "sysName", "vendor", "model", "snmp_status", "ssh_status", "ssh_user", "timestamp"]}
 
+class ExportRequest(BaseModel):
+    columns: List[str]
+    data: Optional[List[Dict]] = None
 
 @api_app.post("/export-history", dependencies=[Depends(get_current_user)])
-async def export_history(request: dict):
-    columns = request.get("columns", [])
-    data = request.get("data", get_results())  # Default to full results if no data provided
+async def export_history(request: ExportRequest):
+    data = request.data if request.data is not None else get_results()
     df = pd.DataFrame(data)
-    selected_cols = [col for col in columns if col in df.columns]
+    selected_cols = [col for col in request.columns if col in df.columns]
     if not selected_cols:
         raise HTTPException(status_code=400, detail="No valid columns selected")
     export_df = df[selected_cols]
@@ -143,7 +147,6 @@ async def export_history(request: dict):
     export_df.to_excel(output, index=False)
     output.seek(0)
     return Response(content=output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=history_export.xlsx"})
-
 
 @api_app.post("/custom-sql", dependencies=[Depends(get_current_user)])
 async def custom_sql(query: str):

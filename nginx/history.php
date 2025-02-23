@@ -1,10 +1,9 @@
 <?php
 session_start();
 if (!isset($_SESSION['token'])) {
-    header("Location: /login.php");
+    header("Location: https://scan.xiaoxqian.xyz:8443/login.php");
     exit;
 }
-$api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your domain
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,329 +12,339 @@ $api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your doma
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>History - Network Scanner</title>
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/datatables.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="/static/js/jquery.min.js"></script>
-    <script src="/static/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/datatables.min.js"></script>
     <style>
         body {
-            background: linear-gradient(135deg, #f0f4f8, #e0e7ef);
-            font-family: 'Poppins', sans-serif;
-            color: #2c3e50;
-            min-height: 100vh;
-        }
-        .navbar {
-            background: #2c3e50;
-            padding: 1rem 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: #ecf0f1 !important;
-        }
-        .nav-link {
-            color: #bdc3c7 !important;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        .nav-link:hover, .nav-link.active {
-            color: #ecf0f1 !important;
-        }
-        .container {
-            max-width: 1400px;
-            margin-top: 2rem;
+            background: #f5f6f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         .card {
             border: none;
-            border-radius: 15px;
-            background: #fff;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        .card-header {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: #fff;
-            padding: 1.5rem;
-            border-radius: 15px 15px 0 0;
-        }
-        .card-title {
-            margin: 0;
-            font-size: 1.75rem;
-            font-weight: 600;
-        }
-        .card-body {
-            padding: 2rem;
-        }
-        .control-panel {
-            background: #f8fafc;
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-        .sql-input {
             border-radius: 8px;
-            border: 1px solid #ced4da;
-            padding: 12px;
-            font-size: 1rem;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-            transition: border-color 0.3s ease;
-        }
-        .sql-input:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-        }
-        .btn {
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .btn-primary {
-            background: #3498db;
-            border: none;
-        }
-        .btn-primary:hover {
-            background: #2980b9;
-        }
-        .btn-success {
-            background: #27ae60;
-            border: none;
-        }
-        .btn-success:hover {
-            background: #219653;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
         }
         .table {
-            background: #fff;
-            border-radius: 10px;
+            margin-bottom: 0;
+            background: white;
+            border-radius: 6px;
             overflow: hidden;
         }
-        th {
-            background: #ecf0f1;
-            font-weight: 600;
-            padding: 12px;
+        .table th {
+            background: #e9ecef;
+            border-bottom: 2px solid #dee2e6;
+            padding: 0.75rem;
         }
-        th input.form-control {
-            margin-top: 8px;
-            padding: 6px;
-            font-size: 0.9rem;
-            border-radius: 5px;
-            border: 1px solid #bdc3c7;
-        }
-        td {
-            padding: 12px;
+        .table td {
             vertical-align: middle;
+            padding: 0.75rem;
         }
-        .dataTables_wrapper .dt-buttons {
-            float: none;
-            text-align: right;
+        .filter-input {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        .sort-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            margin-left: 0.25rem;
+            color: #495057;
+            cursor: pointer;
+        }
+        .sort-btn:hover {
+            color: #007bff;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1rem;
         }
-        .dataTables_length, .dataTables_info {
-            margin-top: 1rem;
-        }
         .dropdown-menu {
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow-y: auto;
         }
-        .dropdown-item {
-            padding: 8px 15px;
-            font-size: 0.95rem;
-        }
-        .dropdown-item:hover {
-            background: #f0f4f8;
+        .sql-query {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
+    <!-- Original navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Network Scanner</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/import.php">Import</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/status.php">Status</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/config.php">Config</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/history.php">History</a></li>
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="https://scan.xiaoxqian.xyz:8443/import.php">Import</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://scan.xiaoxqian.xyz:8443/status.php">Status</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://scan.xiaoxqian.xyz:8443/config.php">Config</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="https://scan.xiaoxqian.xyz:8443/history.php">History</a></li>
                 </ul>
             </div>
         </div>
     </nav>
-    <div class="container">
+
+    <div class="container mt-4">
         <div class="card">
-            <div class="card-header">
-                <h1 class="card-title">Scan History</h1>
-            </div>
             <div class="card-body">
-                <div class="control-panel">
-                    <div class="row align-items-end">
-                        <div class="col-md-8 mb-3 mb-md-0">
-                            <label for="sqlQuery" class="form-label fw-bold">Custom SQL Query (SELECT only):</label>
-                            <input type="text" id="sqlQuery" class="form-control sql-input" placeholder="e.g., SELECT * FROM devices WHERE snmp_status = 'Success'">
+                <div class="controls">
+                    <h4 class="mb-0">Scan History</h4>
+                    <div>
+                        <div class="dropdown d-inline-block me-2">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="columnsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Columns
+                            </button>
+                            <ul class="dropdown-menu" id="columnSelector" aria-labelledby="columnsDropdown">
+                                <!-- Populated by JS -->
+                            </ul>
                         </div>
-                        <div class="col-md-4 d-flex justify-content-end gap-2">
-                            <button id="runSql" class="btn btn-primary"><i class="fas fa-play"></i> Run</button>
-                            <button id="exportBtn" class="btn btn-success"><i class="fas fa-download"></i> Export</button>
-                            <div class="dropdown">
-                                <button class="btn btn-primary dropdown-toggle" type="button" id="columnToggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-eye"></i> Columns
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="columnToggle">
-                                    <li><a class="dropdown-item" href="#" data-column="0">IP</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="1">System Name</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="2">Vendor</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="3">Model</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="4">SNMP Status</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="5">SSH Status</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="6">SSH User</a></li>
-                                    <li><a class="dropdown-item" href="#" data-column="7">Timestamp</a></li>
-                                </ul>
-                            </div>
-                        </div>
+                        <button id="exportBtn" class="btn btn-outline-success btn-sm">Export to Excel</button>
                     </div>
                 </div>
-                <table id="history_table" class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>IP</th>
-                            <th>System Name</th>
-                            <th>Vendor</th>
-                            <th>Model</th>
-                            <th>SNMP Status</th>
-                            <th>SSH Status</th>
-                            <th>SSH User</th>
-                            <th>Timestamp</th>
-                        </tr>
-                        <tr>
-                            <th><input type="text" class="form-control" placeholder="Filter IP" data-column="0"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter SysName" data-column="1"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter Vendor" data-column="2"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter Model" data-column="3"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter SNMP" data-column="4"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter SSH" data-column="5"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter User" data-column="6"></th>
-                            <th><input type="text" class="form-control" placeholder="Filter Time" data-column="7"></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <textarea class="sql-query" id="sqlQuery" placeholder="Enter custom SQL query (e.g., SELECT * FROM devices WHERE ip LIKE '%192.168%')"></textarea>
+                <button id="runSqlBtn" class="btn btn-outline-primary btn-sm mb-3">Run SQL Query</button>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="historyTable">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-    <script>
-    $(document).ready(function() {
-        const token = "<?php echo $_SESSION['token']; ?>";
-        const apiUrl = "<?php echo $api_base_url; ?>";
-        let currentQuery = null;
-        let tableData = [];
 
-        let table = $('#history_table').DataTable({
-            ajax: {
-                url: apiUrl + "/history",
-                headers: {"Authorization": "Bearer " + token},
-                dataSrc: function(json) {
-                    tableData = json.results;
-                    return json.results;
-                },
-                error: function(xhr) {
-                    if (xhr.status === 401) window.location.href = "/login.php";
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script>
+        // State management
+        let allColumns = [];
+        let selectedColumns = [];
+        let filters = {};
+        let sortColumn = null;
+        let sortOrder = 'asc';
+        let currentData = [];
+
+        // Token from PHP session
+        const token = '<?php echo htmlspecialchars($_SESSION['token']); ?>';
+        const apiBaseUrl = 'https://scan.xiaoxqian.xyz:8443/api';
+
+        // Fetch initial data
+        async function fetchHistory() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/history`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    if (response.status === 401) window.location.href = 'https://scan.xiaoxqian.xyz:8443/login.php';
+                    throw new Error('Failed to fetch history: ' + response.statusText);
                 }
-            },
-            columns: [
-                { data: "ip" },
-                { data: "sysName", defaultContent: "N/A" },
-                { data: "vendor", defaultContent: "N/A" },
-                { data: "model", defaultContent: "N/A" },
-                { data: "snmp_status" },
-                { data: "ssh_status" },
-                { data: "ssh_user", defaultContent: "N/A" },
-                { data: "timestamp" }
-            ],
-            pageLength: 10,
-            responsive: true,
-            dom: 'Bfrtip',
-            buttons: [], // Remove DataTables buttons, using custom ones
-            initComplete: function() {
-                this.api().columns().every(function() {
-                    var column = this;
-                    $('input[data-column="' + column.index() + '"]').on('keyup change', function() {
-                        if (column.search() !== this.value) {
-                            column.search(this.value).draw();
-                        }
-                    });
+                const data = await response.json();
+                allColumns = data.columns;
+                currentData = data.results;
+                selectedColumns = selectedColumns.length ? selectedColumns : allColumns;
+                renderTable();
+                renderColumnSelector();
+            } catch (error) {
+                console.error('Error fetching history:', error);
+                alert('Failed to load history data: ' + error.message);
+            }
+        }
+
+        // Render column selector
+        function renderColumnSelector() {
+            const selector = document.getElementById('columnSelector');
+            selector.innerHTML = allColumns.map(col => `
+                <li>
+                    <div class="dropdown-item">
+                        <input type="checkbox" 
+                               id="col_${col}" 
+                               value="${col}" 
+                               ${selectedColumns.includes(col) ? 'checked' : ''}>
+                        <label for="col_${col}">${col}</label>
+                    </div>
+                </li>
+            `).join('');
+            selector.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', updateColumns);
+            });
+        }
+
+        // Update selected columns
+        function updateColumns() {
+            selectedColumns = Array.from(document.querySelectorAll('#columnSelector input:checked'))
+                .map(input => input.value);
+            if (selectedColumns.length === 0) selectedColumns = allColumns;
+            renderTable();
+        }
+
+        // Render table
+        function renderTable() {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+
+            // Apply filters
+            let filteredData = currentData.filter(row => {
+                return Object.entries(filters).every(([col, value]) => {
+                    if (!value) return true;
+                    return String(row[col] || '').toLowerCase().includes(value.toLowerCase());
+                });
+            });
+
+            // Apply sorting
+            if (sortColumn) {
+                filteredData.sort((a, b) => {
+                    const valA = a[sortColumn] || '';
+                    const valB = b[sortColumn] || '';
+                    return sortOrder === 'asc' 
+                        ? String(valA).localeCompare(String(valB)) 
+                        : String(valB).localeCompare(String(valA));
                 });
             }
+
+            // Render headers
+            thead.innerHTML = `
+                <tr>
+                    ${selectedColumns.map(col => `
+                        <th>
+                            <div class="d-flex align-items-center">
+                                <span>${col}</span>
+                                <button class="sort-btn" data-col="${col}">
+                                    ${sortColumn === col && sortOrder === 'asc' ? '▲' : 
+                                      sortColumn === col && sortOrder === 'desc' ? '▼' : '↕'}
+                                </button>
+                            </div>
+                            <input type="text" 
+                                   class="filter-input mt-1" 
+                                   data-col="${col}" 
+                                   value="${filters[col] || ''}" 
+                                   placeholder="Filter...">
+                        </th>
+                    `).join('')}
+                </tr>
+            `;
+
+            // Render body
+            tbody.innerHTML = filteredData.map(row => `
+                <tr>
+                    ${selectedColumns.map(col => `
+                        <td>${row[col] || 'N/A'}</td>
+                    `).join('')}
+                </tr>
+            `).join('');
+
+            // Add event listeners
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const col = btn.dataset.col;
+                    sortColumn = (sortColumn === col && sortOrder === 'asc') ? col : col;
+                    sortOrder = (sortColumn === col && sortOrder === 'asc') ? 'desc' : 'asc';
+                    renderTable();
+                });
+            });
+
+            document.querySelectorAll('.filter-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    filters[e.target.dataset.col] = e.target.value;
+                    renderTable();
+                });
+            });
+        }
+
+        // Export to Excel
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            try {
+                const filteredData = currentData.filter(row => {
+                    return Object.entries(filters).every(([col, value]) => {
+                        if (!value) return true;
+                        return String(row[col] || '').toLowerCase().includes(value.toLowerCase());
+                    });
+                });
+                if (sortColumn) {
+                    filteredData.sort((a, b) => {
+                        const valA = a[sortColumn] || '';
+                        const valB = b[sortColumn] || '';
+                        return sortOrder === 'asc' 
+                            ? String(valA).localeCompare(String(valB)) 
+                            : String(valB).localeCompare(String(valA));
+                    });
+                }
+
+                const response = await fetch(`${apiBaseUrl}/export-history`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        columns: selectedColumns,
+                        data: filteredData
+                    })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) window.location.href = 'https://scan.xiaoxqian.xyz:8443/login.php';
+                    throw new Error('Export failed: ' + response.statusText);
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'history_export.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export data: ' + error.message);
+            }
         });
 
-        // Custom SQL Query
-        $('#runSql').click(function() {
-            var query = $('#sqlQuery').val().trim();
-            if (!query.toLowerCase().startsWith("select")) {
-                alert("Only SELECT queries are allowed.");
+        // Run custom SQL query
+        document.getElementById('runSqlBtn').addEventListener('click', async () => {
+            const query = document.getElementById('sqlQuery').value.trim();
+            if (!query) {
+                alert('Please enter a SQL query.');
                 return;
             }
-            $.ajax({
-                url: apiUrl + "/custom-sql",
-                method: "POST",
-                headers: {"Authorization": "Bearer " + token},
-                contentType: "text/plain", // Send raw string
-                data: query,
-                success: function(data) {
-                    currentQuery = query;
-                    tableData = data.results;
-                    table.clear().rows.add(data.results).draw();
-                },
-                error: function(xhr) {
-                    let errorMsg = xhr.responseJSON?.detail || "Unknown error";
-                    alert("SQL Query Failed: " + errorMsg);
+            try {
+                const url = `${apiBaseUrl}/custom-sql?query=${encodeURIComponent(query)}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = 'https://scan.xiaoxqian.xyz:8443/login.php';
+                    } else if (response.status === 422) {
+                        const errorData = await response.json();
+                        throw new Error('Invalid query format: ' + JSON.stringify(errorData));
+                    }
+                    throw new Error('SQL query failed: ' + response.statusText);
                 }
-            });
+                const data = await response.json();
+                currentData = data.results;
+                renderTable();
+            } catch (error) {
+                console.error('SQL error:', error);
+                alert('SQL query failed: ' + error.message);
+            }
         });
 
-        // Export Filtered or Queried Data
-        $('#exportBtn').click(function() {
-            let filteredData = currentQuery ? tableData : table.rows({ search: 'applied' }).data().toArray();
-            let visibleColumns = table.columns(':visible')[0].map(index => table.column(index).dataSrc());
-
-            $.ajax({
-                url: apiUrl + "/export-history",
-                method: "POST",
-                headers: {"Authorization": "Bearer " + token},
-                contentType: "application/json",
-                data: JSON.stringify({ columns: visibleColumns, data: filteredData }),
-                xhrFields: { responseType: 'blob' },
-                success: function(blob) {
-                    let url = window.URL.createObjectURL(blob);
-                    let a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'history_export.xlsx';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                },
-                error: function(xhr) {
-                    let errorMsg = xhr.responseJSON?.detail || "Unknown error";
-                    alert("Export Failed: " + errorMsg);
-                }
-            });
-        });
-
-        // Column Toggle Dropdown
-        $('.dropdown-menu a').click(function(e) {
-            e.preventDefault();
-            let colIdx = $(this).data('column');
-            let column = table.column(colIdx);
-            column.visible(!column.visible());
-            $(this).toggleClass('active');
-            $(this).prepend(column.visible() ? '<i class="fas fa-check me-2"></i>' : '<i class="fas fa-times me-2"></i>');
-        });
-    });
+        // Initialize
+        fetchHistory();
     </script>
 </body>
 </html>
