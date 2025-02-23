@@ -111,7 +111,7 @@ if (!isset($_SESSION['token'])) {
                         <button id="exportBtn" class="btn btn-outline-success btn-sm">Export to Excel</button>
                     </div>
                 </div>
-                <textarea class="sql-query" id="sqlQuery" placeholder="Enter custom SQL query (e.g., SELECT * FROM devices WHERE ip LIKE '%192.168%')"></textarea>
+                <textarea class="sql-query" id="sqlQuery" placeholder="Enter custom SQL query (e.g: SELECT * FROM devices WHERE ip LIKE '%192.168%')"></textarea>
                 <button id="runSqlBtn" class="btn btn-outline-primary btn-sm mb-3">Run SQL Query</button>
                 <div class="table-responsive">
                     <table class="table table-striped" id="historyTable">
