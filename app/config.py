@@ -41,7 +41,6 @@ SNMP_RETRY_DELAY = 3  # Seconds between SNMP community attempts (increased)
 # SSH settings
 SSH_PORT = 22
 SSH_CREDENTIALS = [
-    {'username': 'huqian@whtkyy.com', 'password': '15991387Hq'},
     {'username': 'admin', 'password': 'admin123'},
 ]
 SSH_TIMEOUT = 60  # Seconds for SSH connection (increased for old devices)
