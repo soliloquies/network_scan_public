@@ -1,28 +1,36 @@
-# app/main.py
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from fastapi import FastAPI, Response, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Response, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from auth import verify_token, create_token
 from snmp_scanner import scan_snmp
 from ssh_scanner import scan_ssh
-from db_handler import save_results, get_results
-from config import get_ip_range, MAX_WORKERS, logger, load_config_from_excel, IP_RANGES, SNMP_COMMUNITIES, SSH_CREDENTIALS
+from db_handler import save_results, get_results, execute_custom_sql
+from config import get_ip_range, MAX_WORKERS, logger, load_config_from_excel, IP_RANGES, SNMP_COMMUNITIES, SSH_CREDENTIALS, USERS
 from datetime import datetime
 from tqdm import tqdm
 import uvicorn
 import os
 import pandas as pd
+import redis
+import io
 
-# Main app for static files
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Sub-app for API endpoints under /api/
 api_app = FastAPI()
 app.mount("/api", api_app)
 
-# Global state for scanning status
-scan_state = {"running": False, "total_ips": 0, "completed_ips": 0, "results": []}
+redis_client = redis.Redis(host='10.10.10.250', port=6379, db=0, decode_responses=True)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(status_code=401, detail="Invalid or expired token")
+    if not verify_token(token):
+        raise credentials_exception
+    return token
 
 async def scan_device(ip, executor):
     loop = asyncio.get_event_loop()
@@ -31,32 +39,35 @@ async def scan_device(ip, executor):
     timestamp = datetime.now().strftime('%Y-%m-%d %H')
     return {**snmp_result, **ssh_result, 'timestamp': timestamp}
 
-async def run_scan():
-    if scan_state["running"]:
-        logger.info("Scan already running, ignoring request")
-        return {"message": "Scan already running"}
-    scan_state["running"] = True
-    scan_state["completed_ips"] = 0
-    IP_RANGE = get_ip_range()
-    scan_state["total_ips"] = len(IP_RANGE)
-    scan_state["results"] = []
+async def run_scan_background(background_tasks: BackgroundTasks):
+    async def scan_task():
+        if redis_client.get("scan_running") == "true":
+            logger.info("Scan already running, ignoring request")
+            return
+        redis_client.set("scan_running", "true")
+        redis_client.set("completed_ips", 0)
+        IP_RANGE = get_ip_range()
+        redis_client.set("total_ips", len(IP_RANGE))
+        redis_client.delete("results")
+        
+        logger.info(f"Scanning {len(IP_RANGE)} IPs with {MAX_WORKERS} workers...")
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            tasks = {asyncio.create_task(scan_device(ip, executor)): ip for ip in IP_RANGE}
+            for task in tqdm(asyncio.as_completed(tasks), total=len(IP_RANGE), desc="Scanning IPs"):
+                try:
+                    result = await task
+                    redis_client.rpush("results", str(result))
+                    redis_client.incr("completed_ips")
+                except Exception as e:
+                    ip = tasks[task]
+                    logger.error(f"Task failed for {ip}: {e}")
+        
+        saved_results = save_results([eval(r) for r in redis_client.lrange("results", 0, -1)])
+        redis_client.set("scan_running", "false")
+        logger.info("Scanning complete.")
     
-    logger.info(f"Scanning {scan_state['total_ips']} IPs with {MAX_WORKERS} workers...")
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        tasks = {asyncio.create_task(scan_device(ip, executor)): ip for ip in IP_RANGE}
-        for task in tqdm(asyncio.as_completed(tasks), total=len(IP_RANGE), desc="Scanning IPs"):
-            try:
-                result = await task
-                scan_state["results"].append(result)
-                scan_state["completed_ips"] += 1
-            except Exception as e:
-                ip = tasks[task]
-                logger.error(f"Task failed for {ip}: {e}")
-    
-    scan_state["results"] = save_results(scan_state["results"]).to_dict(orient='records')
-    scan_state["running"] = False
-    logger.info("Scanning complete.")
-    return {"message": "Scan completed"}
+    background_tasks.add_task(scan_task)
+    return {"message": "Scan started in background"}
 
 def create_excel_template():
     template_path = 'static/template.xlsx'
@@ -72,32 +83,41 @@ def create_excel_template():
         df.to_excel(template_path, index=False)
         logger.info(f"Created Excel template at {template_path}")
 
-@api_app.get("/status")
+@api_app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    username = form_data.username
+    password = form_data.password
+    if username not in USERS or USERS[username] != password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    token = create_token({"sub": username})
+    return {"access_token": token, "token_type": "bearer"}
+
+@api_app.get("/status", dependencies=[Depends(get_current_user)])
 async def get_status():
     return {
-        "running": scan_state["running"],
-        "total_ips": scan_state["total_ips"],
-        "completed_ips": scan_state["completed_ips"],
-        "progress": (scan_state["completed_ips"] / scan_state["total_ips"] * 100) if scan_state["total_ips"] > 0 else 0,
-        "results": scan_state["results"]
+        "running": redis_client.get("scan_running") == "true",
+        "total_ips": int(redis_client.get("total_ips") or 0),
+        "completed_ips": int(redis_client.get("completed_ips") or 0),
+        "progress": (int(redis_client.get("completed_ips") or 0) / int(redis_client.get("total_ips") or 1) * 100),
+        "results": [eval(r) for r in redis_client.lrange("results", 0, -1)]
     }
 
-@api_app.post("/upload-config")
-async def upload_config(file: UploadFile = File(...)):
+@api_app.post("/upload-config", dependencies=[Depends(get_current_user)])
+async def upload_config(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     logger.info("Received config upload request")
     file_path = f"/tmp/{file.filename}"
     with open(file_path, "wb") as f:
         f.write(await file.read())
     load_config_from_excel(file_path)
     os.remove(file_path)
-    return await run_scan()
+    return await run_scan_background(background_tasks)
 
-@api_app.post("/start-scan")
-async def start_scan():
+@api_app.post("/start-scan", dependencies=[Depends(get_current_user)])
+async def start_scan(background_tasks: BackgroundTasks):
     logger.info("Received start-scan request")
-    return await run_scan()
+    return await run_scan_background(background_tasks)
 
-@api_app.get("/config")
+@api_app.get("/config", dependencies=[Depends(get_current_user)])
 async def get_config():
     return {
         "ip_ranges": IP_RANGES,
@@ -105,13 +125,37 @@ async def get_config():
         "ssh_credentials": SSH_CREDENTIALS
     }
 
-@api_app.get("/history")
+@api_app.get("/history", dependencies=[Depends(get_current_user)])
 async def get_history():
-    return {"results": get_results()}
+    return {"results": get_results(), "columns": ["ip", "sysName", "vendor", "model", "snmp_status", "ssh_status", "ssh_user", "timestamp"]}
+
+
+@api_app.post("/export-history", dependencies=[Depends(get_current_user)])
+async def export_history(request: dict):
+    columns = request.get("columns", [])
+    data = request.get("data", get_results())  # Default to full results if no data provided
+    df = pd.DataFrame(data)
+    selected_cols = [col for col in columns if col in df.columns]
+    if not selected_cols:
+        raise HTTPException(status_code=400, detail="No valid columns selected")
+    export_df = df[selected_cols]
+    output = io.BytesIO()
+    export_df.to_excel(output, index=False)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=history_export.xlsx"})
+
+
+@api_app.post("/custom-sql", dependencies=[Depends(get_current_user)])
+async def custom_sql(query: str):
+    try:
+        results = execute_custom_sql(query)
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"SQL error: {str(e)}")
 
 @app.on_event("startup")
 async def startup_event():
     create_excel_template()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="10.10.10.99", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
