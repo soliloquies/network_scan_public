@@ -1,2 +1,0 @@
-[23-Feb-2025 02:50:49 UTC] Failed to connect to API: file_get_contents(https://scan.xiaoxqian.xyz:8443/api/token): Failed to open stream: HTTP request failed! HTTP/1.1 502 Bad Gateway
-

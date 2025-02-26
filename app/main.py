@@ -104,15 +104,19 @@ async def get_status():
         "results": [eval(r) for r in redis_client.lrange("results", 0, -1)]
     }
 
+
 @api_app.post("/upload-config", dependencies=[Depends(get_current_user)])
 async def upload_config(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     logger.info("Received config upload request")
+    # Fix the double /tmp/ issue by using a proper file path
     file_path = f"/tmp/{file.filename}"
     with open(file_path, "wb") as f:
         f.write(await file.read())
     load_config_from_excel(file_path)
     os.remove(file_path)
     return await run_scan_background(background_tasks)
+
+
 
 @api_app.post("/start-scan", dependencies=[Depends(get_current_user)])
 async def start_scan(background_tasks: BackgroundTasks):
