@@ -1,7 +1,9 @@
 <?php
 session_start();
 
-$api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your domain
+$host = $_SERVER['HTTP_HOST']; // Get current host (e.g., scan1.xiaoxqian.xyz:8443)
+$api_base_url = "https://$host/api"; // Dynamic API base URL
+
 
 function verify_token($token) {
     $parts = explode('.', $token);

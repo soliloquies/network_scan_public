@@ -27,24 +27,29 @@ logger.addHandler(console_handler)
 
 
 # Network settings
-IP_RANGES = ['172.16.2.0/30']  # CIDR notation for IP ranges
-#IP_RANGES = ['172.16.1.18/32', '172.16.2.1/32',]
-TIMEOUT = 10  # Seconds
-MAX_WORKERS = 254  # Number of concurrent threads (adjustable)
+IP_RANGES = ['172.23.0.0/17', ]
+MAX_WORKERS = 500  # Number of concurrent threads (adjustable)
 
 # SNMP settings
 SNMP_PORT = 161
-SNMP_COMMUNITIES = ['private', 'public']
-SNMP_TIMEOUT = 3  # Seconds for SNMP response (increased for old devices)
-SNMP_RETRY_DELAY = 3  # Seconds between SNMP community attempts (increased)
+SNMP_COMMUNITIES = [
+     'public','private',
+]
+SNMP_TIMEOUT = 1  # Seconds for SNMP response (increased for old devices)
+SNMP_RETRY_DELAY = 0  # Seconds between SNMP community attempts (increased)
 
 # SSH settings
 SSH_PORT = 22
 SSH_CREDENTIALS = [
-    {'username': 'admin', 'password': 'admin123'},
+    {'username': 'admin', 'password': 'pass123'},
 ]
-SSH_TIMEOUT = 60  # Seconds for SSH connection (increased for old devices)
-SSH_RETRY_DELAY = 5  # Seconds between SSH credential attempts (increased)
+SSH_TIMEOUT = 10  # Seconds for SSH connection (increased for old devices)
+SSH_RETRY_DELAY = 0  # Seconds between SSH credential attempts (increased)
+
+
+
+
+
 
 OIDS = {
     'sysName': '1.3.6.1.2.1.1.5.0',
@@ -61,19 +66,36 @@ MYSQL_CONFIG = {
 }
 
 USERS = {
-    'admin': '1admin123',
+    'admin': 'admin123',
     'user1': 'password1',
 }
+
+
+
+#def get_ip_range():
+#    ip_list = []
+#    for cidr in IP_RANGES:
+#        try:
+#            network = ipaddress.ip_network(cidr, strict=False)
+#            ip_list.extend([str(ip) for ip in network.hosts()])
+#        except ValueError as e:
+#            logger.error(f"Invalid CIDR range {cidr}: {e}")
+#    return ip_list
+
 
 def get_ip_range():
     ip_list = []
     for cidr in IP_RANGES:
         try:
             network = ipaddress.ip_network(cidr, strict=False)
-            ip_list.extend([str(ip) for ip in network.hosts()])
+            for ip in network.hosts():  # 只获取主机地址
+                ip_str = str(ip)
+                if not ip_str.endswith('.0') and not ip_str.endswith('.255'):
+                    ip_list.append(ip_str)
         except ValueError as e:
-            logger.error(f"Invalid CIDR range {cidr}: {e}")
+            print(f"Invalid CIDR range {cidr}: {e}")
     return ip_list
+
 
 def load_config_from_excel(file_path):
     global IP_RANGES, SNMP_COMMUNITIES, SSH_CREDENTIALS

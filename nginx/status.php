@@ -4,7 +4,8 @@ if (!isset($_SESSION['token'])) {
     header("Location: /login.php");
     exit;
 }
-$api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your domain
+$host = $_SERVER['HTTP_HOST']; // Get current host (e.g., scan1.xiaoxqian.xyz:8443)
+$api_base_url = "https://$host/api"; // Dynamic API base URL
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,7 +67,7 @@ $api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your doma
     <script>
     $(document).ready(function() {
         const token = "<?php echo $_SESSION['token']; ?>";
-        const apiUrl = "<?php echo $api_base_url; ?>";
+        const apiUrl = "<?php echo $api_base_url; ?>"; // Dynamic API URL from PHP
 
         function updateStatus() {
             $.ajax({
@@ -77,7 +78,7 @@ $api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your doma
                     $("#total_ips").text(data.total_ips);
                     $("#completed_ips").text(data.completed_ips);
                     $("#progress_bar").css("width", data.progress + "%").text(Math.round(data.progress * 100) / 100 + "%").attr("aria-valuenow", data.progress);
-                    
+
                     const tbody = $("#results_table");
                     tbody.empty();
                     data.results.forEach(result => {

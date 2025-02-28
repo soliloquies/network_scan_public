@@ -4,7 +4,8 @@ if (!isset($_SESSION['token'])) {
     header("Location: /login.php");
     exit;
 }
-$api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your domain
+$host = $_SERVER['HTTP_HOST']; // Get current host (e.g., scan1.xiaoxqian.xyz:8443)
+$api_base_url = "https://$host/api"; // Dynamic API base URL
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -41,35 +42,24 @@ $api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your doma
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['configFile'])) {
     $file = $_FILES['configFile'];
-    
-    // 特别注意：只使用文件名，不包含路径前缀
-    // 这样后端即使添加/tmp/前缀也不会导致双重路径
     $file_name = basename($file['name']);
-    
-    // 临时存储上传的文件
     $temp_path = "/tmp/" . $file_name;
-    
+
     if (move_uploaded_file($file['tmp_name'], $temp_path)) {
         $ch = curl_init("$api_base_url/upload-config");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $_SESSION['token']]);
-        
-        // 创建临时文件重命名，去掉路径前缀
-        // 后端可能会自动添加/tmp/，所以我们只发送文件名
-        // 使用CURLFile时只提供文件名部分
         curl_setopt($ch, CURLOPT_POSTFIELDS, [
             'file' => new CURLFile($temp_path, '', $file_name)
         ]);
-        
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $response = curl_exec($ch);
         $result = json_decode($response, true);
         curl_close($ch);
-        
-        // 清理临时文件
+
         unlink($temp_path);
-        
+
         if ($result && isset($result['message'])) {
             echo "<div class='alert alert-success'>{$result['message']}</div>";
         } else {

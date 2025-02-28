@@ -4,7 +4,8 @@ if (!isset($_SESSION['token'])) {
     header("Location: /login.php");
     exit;
 }
-$api_base_url = "https://scan.xiaoxqian.xyz:8443/api"; // Replace with your domain
+$host = $_SERVER['HTTP_HOST']; // Get hostname and port (e.g., scan1.xiaoxqian.xyz:8443)
+$api_base_url = "https://$host/api"; // Dynamic API base URL
 
 $ch = curl_init("$api_base_url/config");
 curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $_SESSION['token']]);
