@@ -72,23 +72,12 @@ USERS = {
 
 
 
-#def get_ip_range():
-#    ip_list = []
-#    for cidr in IP_RANGES:
-#        try:
-#            network = ipaddress.ip_network(cidr, strict=False)
-#            ip_list.extend([str(ip) for ip in network.hosts()])
-#        except ValueError as e:
-#            logger.error(f"Invalid CIDR range {cidr}: {e}")
-#    return ip_list
-
-
 def get_ip_range():
     ip_list = []
     for cidr in IP_RANGES:
         try:
             network = ipaddress.ip_network(cidr, strict=False)
-            for ip in network.hosts():  # 只获取主机地址
+            for ip in network.hosts():  # don't get network and gateway address
                 ip_str = str(ip)
                 if not ip_str.endswith('.0') and not ip_str.endswith('.255'):
                     ip_list.append(ip_str)

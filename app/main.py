@@ -25,8 +25,8 @@ api_app = FastAPI()
 app.mount("/api", api_app)
 
 # Redis configuration
-redis_host = '10.10.10.250'
-current_ip = '10.10.10.202_whut'
+redis_host = '10.10.10.1'
+current_ip = '10.10.10.2'
 
 class RedisWithPrefix:
     def __init__(self, host=redis_host, port=6379, db=0, decode_responses=True):
@@ -108,16 +108,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     token = create_token({"sub": username})
     return {"access_token": token, "token_type": "bearer"}
 
-## Get scanning status
-# @api_app.get("/status", dependencies=[Depends(get_current_user)])
-# async def get_status():
-#    return {
-#        "running": redis_client.get("scan_running") == "true",
-#        "total_ips": int(redis_client.get("total_ips") or 0),
-#        "completed_ips": int(redis_client.get("completed_ips") or 0),
-#        "progress": (int(redis_client.get("completed_ips") or 0) / int(redis_client.get("total_ips") or 1) * 100),
-#        "results": [eval(r) for r in redis_client.lrange("results", 0, -1)]
-#    }
+
 
 @api_app.get("/status", dependencies=[Depends(get_current_user)])
 async def get_status():
@@ -206,4 +197,4 @@ async def startup_event():
 
 # Run the application
 if __name__ == "__main__":
-    uvicorn.run(app, host="10.10.10.202", port=8000)
+    uvicorn.run(app, host=current_ip, port=8000)
